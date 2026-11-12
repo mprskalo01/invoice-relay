@@ -1,0 +1,47 @@
+# --- Secrets (never commit) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# --- Java / Maven ---
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.log
+hs_err_pid*
+
+# --- Node / frontend ---
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.vite/
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# --- Terraform ---
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+# commit .terraform.lock.hcl
+
+# --- IDE / OS ---
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+desktop.ini
