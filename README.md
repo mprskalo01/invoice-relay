@@ -2,7 +2,7 @@
 
 A small invoice pipeline built to show how I design reliable backend systems: every invoice is accepted, validated and delivered exactly once in effect, even when Kafka redelivers a message or a service crashes halfway through.
 
-> **Status:** early development. v1 (API, auth, tests, CI, dashboard) is targeted for mid-November 2026, and v2 (Kafka pipeline, tracing, GraphQL, AWS) for mid-December 2026.
+> **Status:** early development. v1 (API, auth, tests, CI, dashboard) comes first, then v2 (Kafka pipeline, tracing, GraphQL, AWS).
 
 ## Goal
 
@@ -28,6 +28,8 @@ flowchart LR
   BFF -. traces .-> OTEL[OTel collector] --> G[Grafana]
 ```
 
+**Document:** a structured JSON invoice (parties, lines, totals, currency), validated against business rules.
+
 **Document lifecycle:** `received → validated → delivered`, or `failed`, which goes to the dead-letter topic and can be replayed.
 
 **Delivery:** each tenant registers a webhook URL. The deliver stage sends an HTTP POST signed with HMAC-SHA256 and carrying an `Idempotency-Key` header (the document ID). It retries with exponential backoff and sends the document to the dead-letter topic once retries are exhausted.
@@ -36,14 +38,14 @@ flowchart LR
 
 | Layer | Choice |
 |---|---|
-| Backend | Java 21, Spring Boot 3, modular monolith |
+| Backend | Java 25, Spring Boot 4.1, Maven; modular monolith with boundaries verified by Spring Modulith |
 | Data | PostgreSQL, Flyway, keyset pagination, optimistic locking; multi-tenant via a `tenant_id` column with Postgres row-level security |
 | Messaging | Kafka, transactional outbox, idempotent consumers, dead-letter topic |
 | Auth | Keycloak (OIDC); backend-for-frontend with an HttpOnly session cookie + CSRF; tokens never reach the browser |
 | Frontend | React, TypeScript (strict), Vite, Tailwind, TanStack Query |
 | API | REST with Problem Details (RFC 9457) errors; GraphQL read API |
-| Testing | JUnit 5, Spring test slices, Testcontainers (Postgres, Kafka), Playwright |
-| Observability | OpenTelemetry → Grafana |
+| Testing | JUnit 5, Spring test slices, Testcontainers (Postgres, Kafka, Keycloak), WireMock, Vitest, Playwright |
+| Observability | OpenTelemetry (Spring Boot starter) → Grafana |
 | Infra | Terraform → AWS ECS Fargate + RDS; GitHub Actions with OIDC (no long-lived keys) |
 
 ## Roadmap
@@ -63,11 +65,18 @@ flowchart LR
 
 ## Design decisions
 
-Architecture Decision Records will live in [`docs/adr/`](docs/adr/):
+Architecture Decision Records live in [`docs/adr/`](docs/adr/):
 
-- ADR-001: why a modular monolith (not microservices)
-- ADR-002: cookie session via BFF vs tokens in the SPA
+- [ADR-0001](docs/adr/0001-modular-monolith.md): why a modular monolith (not microservices)
+- [ADR-0002](docs/adr/0002-bff-cookie-session.md): cookie session via BFF vs tokens in the SPA
+
+## Documentation
+
+- [Architecture](docs/architecture.md): containers, modules, key flows, scaling notes
+- [Domain](docs/domain.md): language, lifecycle, invariants
+- [Threat model](docs/threat-model.md): trust boundaries and mitigations
+- [Conventions](docs/conventions.md): code, tests, git
 
 ## Running locally
 
-Coming with the first v1 milestone.
+Coming with the first v1 milestone. Development environment: [docs/dev-setup.md](docs/dev-setup.md).

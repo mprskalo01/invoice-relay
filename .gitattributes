@@ -1,0 +1,18 @@
+# Normalise to LF in the repo and working tree (WSL/Linux/CI parity)
+* text=auto eol=lf
+
+# Must stay LF to run on Linux
+*.sh   text eol=lf
+mvnw   text eol=lf
+
+# Windows-only scripts
+*.cmd  text eol=crlf
+*.bat  text eol=crlf
+
+# Binary
+*.jar  binary
+*.png  binary
+*.jpg  binary
+*.gif  binary
+*.ico  binary
+*.woff2 binary
