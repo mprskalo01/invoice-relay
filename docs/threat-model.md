@@ -28,9 +28,10 @@ flowchart LR
 | T7 | Forged or replayed webhook | 4 | HMAC-SHA256 over `timestamp + "." + body`; the timestamp header lets receivers reject old messages; secret per endpoint, rotatable | Signature test vectors | ⏳ |
 | T8 | Duplicate delivery on redelivery or crash | 5 | Idempotent consumer + `Idempotency-Key` | Same event delivered twice → one effect | ⏳ |
 | T9 | Poison message blocks a partition | 5 | Bounded retries → DLT; replay tooling | Malformed event lands on the DLT | ⏳ |
-| T10 | Denial of service via large or many requests | 1 | Body size limit, line-item limit, rate limit per tenant | 413 / 429 tests | ⏳ |
+| T10 | Denial of service via large or many requests | 1 | Body ≤ 1 MiB checked before parsing, ≤ 500 lines, field length limits ([domain](domain.md#invariants)), rate limit per tenant | 413 / 429 tests | ⏳ |
 | T11 | Sensitive data in logs or traces | all | No bodies, tokens or secrets logged; attributes allow-listed in spans | Log-capture test | ⏳ |
 | T12 | Secrets leaked from the repo or CI | — | No secrets in git; GitHub OIDC → AWS (no long-lived keys); secret scanning | — | ⏳ |
 | T13 | Supply chain | — | Dependabot; GitHub Actions pinned to commit SHAs; minimal base image | — | ⏳ |
+| T14 | Intake `Idempotency-Key` collision returns another tenant's response | 1, 3 | Keys scoped per tenant (stored with `tenant_id`); same key + different body → 422; 3-day TTL bounds storage | Same key from two tenants → two documents | ⏳ |
 
 TODO(Mario): review each row when its step lands, and add threats found during the step.

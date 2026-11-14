@@ -30,7 +30,7 @@ flowchart LR
 
 **Document:** a structured JSON invoice (parties, lines, totals, currency), validated against business rules.
 
-**Document lifecycle:** `received → validated → delivered`, or `failed`, which goes to the dead-letter topic and can be replayed.
+**Document lifecycle:** `received → validated → delivering → delivered`. A business-rule violation ends in `rejected` (the client submits a corrected invoice); exhausted delivery retries end in `failed`, which goes to the dead-letter topic and can be replayed from the start.
 
 **Delivery:** each tenant registers a webhook URL. The deliver stage sends an HTTP POST signed with HMAC-SHA256 and carrying an `Idempotency-Key` header (the document ID). It retries with exponential backoff and sends the document to the dead-letter topic once retries are exhausted.
 

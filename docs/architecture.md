@@ -63,10 +63,11 @@ sequenceDiagram
   participant A as api (BFF)
   participant DB as Postgres
   B->>A: POST /documents (cookie + X-XSRF-TOKEN, JSON invoice)
-  A->>A: authn (session) → authz (role, tenant) → validate
+  A->>A: authn (session) → authz (role, tenant) → intake checks (size, schema, limits, duplicate)
   A->>DB: INSERT document (status=RECEIVED) [+ outbox row, v2] in one tx
-  A-->>B: 201 Location: /documents/{id} · or 400/422 Problem Details
+  A-->>B: 202 Location: /documents/{id} · or 400/409/413/415/422 Problem Details
 ```
+In v1 the document stays `RECEIVED`; the validate and deliver stages arrive with the v2 pipeline. Status codes and the lifecycle are in [domain](domain.md#intake).
 
 ### 2 · Pipeline (v2) *(planned)*
 ```mermaid
@@ -81,16 +82,18 @@ sequenceDiagram
   R->>K: publish document.received (key = documentId)
   R->>DB: mark published
   K->>V: consume (idempotent)
-  V->>DB: RECEIVED→VALIDATED + outbox(document.validated) in one tx
+  V->>DB: RECEIVED→VALIDATED (or REJECTED + violations) + outbox(document.validated) in one tx
   K->>D: consume document.validated (idempotent)
+  D->>DB: VALIDATED→DELIVERING (deliveringSince = now)
   D->>E: POST, HMAC signature, Idempotency-Key=documentId
   alt 2xx
-    D->>DB: VALIDATED→DELIVERED
+    D->>DB: DELIVERING→DELIVERED
   else retries exhausted
+    D->>DB: DELIVERING→FAILED (last attempt outcome)
     D->>K: document.failed → DLT
   end
 ```
-Open design points (decided in the Wk 5 step): hand-written outbox relay vs Spring Modulith's event publication registry; polling vs CDC; how consumer de-duplication is keyed.
+Open design points (decided in the Wk 5 step): hand-written outbox relay vs Spring Modulith's event publication registry; polling vs CDC; how consumer de-duplication is keyed. A sweeper re-queues documents stuck in `DELIVERING` past the 5-minute lease; this is safe because receivers de-duplicate on `Idempotency-Key`.
 
 ### 3 · Login (v1) *(planned)*
 Authorization code + PKCE between the BFF and Keycloak. Tokens are stored server-side in the session; the browser only ever holds an HttpOnly, Secure, SameSite session cookie. See ADR-0002.
